@@ -1,4 +1,8 @@
-console.log('Hello, world')
-;(function () {
-	throw new Error('test error with Typescript stack trace')
-})()
+import { initializeApp, credential } from 'firebase-admin'
+
+initializeApp({
+	credential: credential.applicationDefault(),
+	databaseURL: 'https://hn-comment-bot.firebaseio.com'
+})
+
+console.log('Firebase initialised')
