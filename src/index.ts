@@ -1,22 +1,13 @@
-import { difference, concat } from 'lodash'
+import { difference, concat, values, chunk } from 'lodash'
 import got from 'got'
-
-export type ItemID = string
-
-export interface Root {
-	id: ItemID
-	kids?: ItemID[]
-}
-
-export interface User {
-	id: string
-	submitted?: ItemID[]
-}
-
-export interface IDBReadable {
-	getUser(id: string): Promise<User>
-	getRoot(id: ItemID): Promise<Root>
-}
+import { sql } from '@pgtyped/query'
+import {
+	ICreateKidsParams,
+	ICreateKidsQuery,
+	ICreateRootsQuery,
+	IGetUserRootsKidsQuery
+} from './index.types'
+import { tx } from './pg'
 
 export interface Item {
 	id: ItemID
@@ -28,56 +19,94 @@ export interface Item {
 	// type: "job"|"story"|"comment"|"poll"|"pollopt"
 }
 
-export interface HN {
-	getUser(id: string): Promise<User>
-	getItem(id: ItemID): Promise<Item>
-}
+export type ItemID = number
 
-export class Crawler {
-	constructor(readonly hn: HN, readonly db: IDBReadable) {}
+const createRoots = sql<ICreateRootsQuery>`
+	INSERT INTO hn_submitted (hn_username, hn_id)
+	VALUES $$roots(hnUsername, id)
+	ON CONFLICT (hn_id) DO NOTHING
+`
 
-	public async getNewRootsForUser(dbUser: User): Promise<Root[]> {
-		const hnUser = await this.hn.getUser(dbUser.id)
-		const newRootIDs = difference(hnUser.submitted, dbUser.submitted || [])
-		return Promise.all(newRootIDs.map(this.hn.getItem))
-	}
+const createKids = sql<ICreateKidsQuery>`
+	INSERT INTO hn_kids (parent_id, id)
+	VALUES $$kids(parentId, id)
+	ON CONFLICT (id) DO NOTHING
+	RETURNING parent_id, id
+`
 
-	async getNewCommentsForRoot(rootID: ItemID): Promise<Item[]> {
-		const [dbRoot, hnRoot] = await Promise.all([
-			this.db.getRoot(rootID),
-			this.hn.getItem(rootID)
-		])
-		if (!dbRoot.kids) {
-			return []
-		}
-		const newItems = difference(hnRoot.kids, dbRoot.kids)
-		return await Promise.all(newItems.map((n) => this.hn.getItem(n)))
-	}
-
-	public async getNewCommentsForUser(dbUser: User): Promise<Item[]> {
-		if (!dbUser.submitted) {
-			return []
-		}
-		const newComments = await Promise.all(
-			dbUser.submitted.map((r) => this.getNewCommentsForRoot(r))
-		)
-		return concat([], ...newComments)
-	}
-}
-
-async function getItem(id: ItemID) {
+async function getHNItem(itemID: ItemID) {
+	console.log(`loading item ${itemID}...`)
 	const { body } = await got<Item>(
-		`https://hacker-news.firebaseio.com/v0/item/${id}.json`,
+		`https://hacker-news.firebaseio.com/v0/item/${itemID}.json`,
 		{
 			responseType: 'json'
 		}
 	)
+	console.log(`loaded item ${itemID}`)
 	return body
 }
 
+async function getHNUser(username: string): Promise<{ submitted?: ItemID[] }> {
+	console.log(`loading user ${username}...`)
+	const { body } = await got<{
+		submitted?: ItemID[]
+	}>(`https://hacker-news.firebaseio.com/v0/user/${username}.json?`, {
+		responseType: 'json'
+	})
+	console.log(`loaded user ${username}`)
+	return body
+}
+
+async function updateRoots(hnUsername: string, submitted: number[]) {
+	const hnRoots = await Promise.all(submitted.map(getHNItem))
+	const createdKids = await tx(async (db) => {
+		const [_, createdKids] = await Promise.all([
+			createRoots.run(
+				{
+					roots: hnRoots.map((r) => ({
+						hnUsername,
+						id: r.id
+					}))
+				},
+				db
+			),
+			createKids.run(
+				{
+					kids: concat(
+						[],
+						...hnRoots.map((r) =>
+							(r.kids || []).map((k) => ({
+								id: k,
+								parentId: r.id
+							}))
+						)
+					)
+				},
+				db
+			)
+		])
+		return createdKids
+	})
+	await Promise.all(
+		createdKids.map(async (k) => {
+			const kidItem = await getHNItem(k.id)
+			const kidRoot = hnRoots.find((r) => r.id === k.parent_id)
+			console.log(
+				`New comment on\n${JSON.stringify(kidRoot)}\n${JSON.stringify(kidItem)}`
+			)
+		})
+	)
+}
+
+async function updateuser(hnUsername: string) {
+	const hnUser: { submitted?: ItemID[] } = await getHNUser(hnUsername)
+	const submitted = hnUser.submitted || []
+	const chunks = chunk(submitted, 10)
+	for (const c of chunks) {
+		await updateRoots(hnUsername, c)
+	}
+}
+
 ;(async () => {
-	/*
-	const item = await traverseItem('24857357')
-	console.log('response', JSON.stringify(item))
-	*/
+	await updateuser('golergka')
 })()
