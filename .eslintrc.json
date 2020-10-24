@@ -28,7 +28,7 @@
 		"plugin:promise/recommended"
 	],
 	"ignorePatterns": [
-		"src/schema/resolvers/types.ts"
+		"**/*.test.ts"
 	],
 	"rules": {
 		"prefer-destructuring": [
