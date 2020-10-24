@@ -1,21 +1,11 @@
 /** Types generated for queries found in "./src/index.ts" */
-
-/** 'GetUserRootsKids' parameters type */
-export interface IGetUserRootsKidsParams {
-	hnUsername: string | null | void
-}
-
-/** 'GetUserRootsKids' return type */
-export interface IGetUserRootsKidsResult {
-	rootId: number
-	kidId: number
-}
-
-/** 'GetUserRootsKids' query type */
-export interface IGetUserRootsKidsQuery {
-	params: IGetUserRootsKidsParams
-	result: IGetUserRootsKidsResult
-}
+export type Json =
+	| null
+	| boolean
+	| number
+	| string
+	| Json[]
+	| { [key: string]: Json }
 
 /** 'CreateRoots' parameters type */
 export interface ICreateRootsParams {
@@ -52,4 +42,37 @@ export interface ICreateKidsResult {
 export interface ICreateKidsQuery {
 	params: ICreateKidsParams
 	result: ICreateKidsResult
+}
+
+/** 'GetSession' parameters type */
+export interface IGetSessionParams {
+	chatId: number | null | void
+}
+
+/** 'GetSession' return type */
+export interface IGetSessionResult {
+	session: Json
+	hn_username: string | null
+}
+
+/** 'GetSession' query type */
+export interface IGetSessionQuery {
+	params: IGetSessionParams
+	result: IGetSessionResult
+}
+
+/** 'SetSession' parameters type */
+export interface ISetSessionParams {
+	chatId: number | null | void
+	session: Json | null | void
+	hnUsername: string | null | void
+}
+
+/** 'SetSession' return type */
+export type ISetSessionResult = void
+
+/** 'SetSession' query type */
+export interface ISetSessionQuery {
+	params: ISetSessionParams
+	result: ISetSessionResult
 }

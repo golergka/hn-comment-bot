@@ -11,7 +11,6 @@ import { as as queryFormat } from 'pg-promise'
 const { POSTGRES_URL } = process.env
 
 if (!POSTGRES_URL) {
-	console.log('env', process.env)
 	throw new Error('Must specify POSTGRES_URL')
 }
 
