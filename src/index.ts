@@ -1,4 +1,4 @@
-import { concat, chunk, groupBy } from 'lodash'
+import { concat, chunk } from 'lodash'
 import got from 'got'
 import { sql } from '@pgtyped/query'
 import {
@@ -21,9 +21,8 @@ import { pg, tx } from './pg'
 import Telegraf from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 import { PoolClient } from 'pg'
-import { DateTime } from 'luxon'
-import { Chat } from 'telegraf/typings/telegram-types'
 import { promisify } from 'util'
+import { decode } from 'he'
 
 export interface Item {
 	id: ItemID
@@ -376,9 +375,10 @@ async function loopSendNotifications() {
 					setPostsNotified.run({ ids: unnotified.map((u) => u.itemId) }, db),
 					...unnotified.map(async (u) => {
 						const item = await loadHNItem(u.itemId)
+						const text = decode(item.text || '').replace(/<p>/g, '\n')
 						bot.telegram.sendMessage(
 							u.chatId,
-							`You have received comment:\n${item.text}`
+							`You have received comment:\n${text}`
 						)
 					})
 				])
