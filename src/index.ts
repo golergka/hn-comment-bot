@@ -2,15 +2,18 @@ import { concat, chunk } from 'lodash'
 import got from 'got'
 import { sql } from '@pgtyped/query'
 import {
+	ICreateHnUserQuery,
 	ICreateKidsQuery,
 	ICreateRootsQuery,
+	IGetHnUserQuery,
 	IGetSessionQuery,
 	ISetSessionQuery
 } from './index.types'
-import { tx } from './pg'
+import { pg, tx } from './pg'
 import Telegraf from 'telegraf'
 import { TelegrafContext } from 'telegraf/typings/context'
 import { PoolClient } from 'pg'
+import { DateTime } from 'luxon'
 
 export interface Item {
 	id: ItemID
@@ -19,6 +22,7 @@ export interface Item {
 	// title?: string
 	text?: string
 	kids?: ItemID[]
+	time: number
 	// type: "job"|"story"|"comment"|"poll"|"pollopt"
 }
 
@@ -37,19 +41,17 @@ const createKids = sql<ICreateKidsQuery>`
 	RETURNING parent_id, id
 `
 
-async function getHNItem(itemID: ItemID) {
-	console.log(`loading item ${itemID}...`)
+async function loadHNItem(itemID: ItemID) {
 	const { body } = await got<Item>(
 		`https://hacker-news.firebaseio.com/v0/item/${itemID}.json`,
 		{
 			responseType: 'json'
 		}
 	)
-	console.log(`loaded item ${itemID}`)
 	return body
 }
 
-async function getHNUser(username: string): Promise<{ submitted?: ItemID[] }> {
+async function loadHNUser(username: string): Promise<{ submitted?: ItemID[] }> {
 	const { body } = await got<{
 		submitted?: ItemID[]
 	}>(`https://hacker-news.firebaseio.com/v0/user/${username}.json?`, {
@@ -58,8 +60,13 @@ async function getHNUser(username: string): Promise<{ submitted?: ItemID[] }> {
 	return body
 }
 
-async function updateRoots(hnUsername: string, submitted: number[]) {
-	const hnRoots = await Promise.all(submitted.map(getHNItem))
+async function updateRoots(
+	hnUsername: string,
+	subscribedAt: DateTime,
+	chatIds: number[],
+	submitted: number[]
+): Promise<void> {
+	const hnRoots = await Promise.all(submitted.map(loadHNItem))
 	const createdKids = await tx(async (db) => {
 		const [_, createdKids] = await Promise.all([
 			createRoots.run(
@@ -90,21 +97,40 @@ async function updateRoots(hnUsername: string, submitted: number[]) {
 	})
 	await Promise.all(
 		createdKids.map(async (k) => {
-			const kidItem = await getHNItem(k.id)
+			const kidItem = await loadHNItem(k.id)
 			const kidRoot = hnRoots.find((r) => r.id === k.parent_id)
-			console.log(
-				`New comment on\n${JSON.stringify(kidRoot)}\n${JSON.stringify(kidItem)}`
-			)
+			const kidCreatedAt = DateTime.fromMillis(kidItem.time * 1000)
+			if (kidCreatedAt > subscribedAt) {
+				const url = `https://news.ycombinator.com/item?id=${kidItem.id}`
+				const notificationText = `${
+					kidItem.text
+				}\n[${kidCreatedAt.toLocaleString(DateTime.DATETIME_MED)} by ${
+					kidItem.by
+				}](${url})`
+				await Promise.all(
+					chatIds.map((c) => bot.telegram.sendMessage(c, notificationText))
+				)
+			}
 		})
 	)
 }
 
-async function updateUser(hnUsername: string) {
-	const hnUser: { submitted?: ItemID[] } = await getHNUser(hnUsername)
+async function updateUser(
+	hnUsername: string,
+	subscribedAt: DateTime,
+	chatIds: number[]
+): Promise<void> {
+	const start = new Date().getTime()
+	const hnUser: { submitted?: ItemID[] } = await loadHNUser(hnUsername)
 	const submitted = hnUser.submitted || []
 	const chunks = chunk(submitted, 10)
+
 	for (const c of chunks) {
-		await updateRoots(hnUsername, c)
+		await updateRoots(hnUsername, subscribedAt, chatIds, c)
+		/*
+		const now = new Date().getTime()
+		if ((now - start) >= 3000) { break }
+		*/
 	}
 }
 
@@ -184,13 +210,13 @@ bot.start(({ reply }) =>
 	)
 )
 
-const checkHNUser = sql`
-	SELECT hn_username
+const getHNUser = sql<IGetHnUserQuery>`
+	SELECT hn_username, subscribed_at
 	FROM hn_users
 	WHERE hn_username = $hnUsername
 `
 
-const createHNUser = sql`
+const createHNUser = sql<ICreateHnUserQuery>`
 	INSERT INTO hn_users (hn_username)
 	VALUES ($hnUsername)
 `
@@ -205,11 +231,11 @@ bot.command('subscribe', async (ctx: SessionContext) => {
 	const hnUsername = split[1]
 
 	const [check, _] = await Promise.all([
-		checkHNUser.run({ hnUsername }, ctx.db!),
+		getHNUser.run({ hnUsername }, ctx.db!),
 		ctx.reply(`Checking username ${hnUsername}...`)
 	])
 	if (!check || check.length === 0) {
-		const hnUser = await getHNUser(hnUsername)
+		const hnUser = await loadHNUser(hnUsername)
 		if (!hnUser) {
 			await ctx.reply(
 				`Can't find HN user ${hnUsername}. Are you sure you spelled username right?`
@@ -240,3 +266,30 @@ bot.command('unsubscribe', async (ctx: SessionContext) => {
 })
 
 bot.launch()
+
+async function checkAllUsers() {
+	const users = await pg.query(`
+		SELECT
+			hn_users.hn_username AS "hnUsername",
+			hn_users.subscribed_at AS "subscribedAt",
+			"chatIds"
+		FROM hn_users,
+		LATERAL (
+			SELECT ARRAY (
+				SELECT chat_id
+				FROM tg_users
+				WHERE tg_users.hn_username = hn_users.hn_username
+			) AS "chatIds"
+		) AS tg
+		WHERE cardinality("chatIds") > 0
+	`)
+	await Promise.all(
+		users.rows.map((u) =>
+			updateUser(u.hnUsername, DateTime.fromJSDate(u.subscribedAt), u.chatIds)
+		)
+	)
+}
+
+setInterval(checkAllUsers, 5000)
+
+checkAllUsers()

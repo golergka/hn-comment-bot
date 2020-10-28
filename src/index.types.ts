@@ -76,3 +76,34 @@ export interface ISetSessionQuery {
 	params: ISetSessionParams
 	result: ISetSessionResult
 }
+
+/** 'GetHnUser' parameters type */
+export interface IGetHnUserParams {
+	hnUsername: string | null | void
+}
+
+/** 'GetHnUser' return type */
+export interface IGetHnUserResult {
+	hn_username: string
+	subscribed_at: Date
+}
+
+/** 'GetHnUser' query type */
+export interface IGetHnUserQuery {
+	params: IGetHnUserParams
+	result: IGetHnUserResult
+}
+
+/** 'CreateHnUser' parameters type */
+export interface ICreateHnUserParams {
+	hnUsername: string | null | void
+}
+
+/** 'CreateHnUser' return type */
+export type ICreateHnUserResult = void
+
+/** 'CreateHnUser' query type */
+export interface ICreateHnUserQuery {
+	params: ICreateHnUserParams
+	result: ICreateHnUserResult
+}
