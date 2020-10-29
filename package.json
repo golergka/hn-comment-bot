@@ -13,7 +13,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "jest",
     "typegen": "pgtyped -c pgtyped.json",
-    "start": "env-cmd --silent node --unhandled-rejections=strict -r source-map-support/register .build/index.js"
+    "start": "npm run build && env-cmd --silent node --unhandled-rejections=strict -r source-map-support/register -r ts-node/register -r tsconfig-paths/register .build/index.js"
   },
   "husky": {
     "hooks": {
@@ -67,6 +67,8 @@
     "pg-promise": "^10.7.0",
     "source-map-support": "^0.5.19",
     "telegraf": "^3.38.0",
+    "ts-node": "^9.0.0",
+    "tsconfig-paths": "^3.9.0",
     "typescript": "^3.1"
   }
 }
