@@ -51,9 +51,9 @@ export async function notificationSendLoop() {
 						const dateText = date.toLocaleString(DateTime.DATETIME_MED)
 						const messageText =
 							`Re: <a href="${hnUrl(root.id)}">${root.title}</a>` +
-							`<p>` +
-							item.text +
-							'<p>' +
+							`\n\n` +
+							item.text.replace(/<p>/g, '\n\n') +
+							`\n\n` +
 							`${item.by}, <a href="${hnUrl(item.id)}">${dateText}</a>`
 						bot.telegram.sendMessage(u.chatId, messageText, {
 							parse_mode: 'HTML'
