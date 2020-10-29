@@ -13,7 +13,7 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "test": "jest",
     "typegen": "pgtyped -c pgtyped.json",
-    "start": "npm run build && env-cmd --silent node --unhandled-rejections=strict -r source-map-support/register -r ts-node/register -r tsconfig-paths/register .build/index.js"
+    "start": "env-cmd --silent node --unhandled-rejections=strict -r source-map-support/register -r ts-node/register -r tsconfig-paths/register .build/index.js"
   },
   "husky": {
     "hooks": {
