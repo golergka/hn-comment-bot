@@ -1,6 +1,6 @@
 import { Middleware } from 'telegraf'
-import { tx } from '../pg'
-import { SessionContext } from '../sessionContext'
+import { tx } from 'src/pg'
+import { SessionContext } from 'src/bot/sessionContext'
 
 export const txMiddleware: Middleware<SessionContext> = async (
 	ctx: SessionContext,

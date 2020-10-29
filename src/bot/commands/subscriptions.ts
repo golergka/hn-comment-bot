@@ -1,5 +1,5 @@
 import { sql } from '@pgtyped/query'
-import { SessionContext } from '../sessionContext'
+import { SessionContext } from 'src/bot/sessionContext'
 import { IGetSubscriptionsByUserQuery } from './subscriptions.types'
 
 const getSubscriptionsByUser = sql<IGetSubscriptionsByUserQuery>`

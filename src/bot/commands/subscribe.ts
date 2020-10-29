@@ -1,7 +1,7 @@
 import { sql } from '@pgtyped/query'
-import { getArgument } from '../getArgument'
-import { loadHNUser } from '../hnApi'
-import { SessionContext } from '../sessionContext'
+import { getArgument } from 'src/bot/getArgument'
+import { loadHNUser } from 'src/hnApi'
+import { SessionContext } from 'src/bot/sessionContext'
 import {
 	IGetHnUserQuery,
 	ICreateHnUserQuery,

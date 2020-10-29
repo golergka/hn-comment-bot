@@ -21,7 +21,8 @@
 		"strictPropertyInitialization": true,
 		"skipLibCheck": true,
 		"declaration": true,
-		"sourceMap": true
+		"sourceMap": true,
+		"baseUrl": "."
 	},
 	"include": [
 		"src/**/*"

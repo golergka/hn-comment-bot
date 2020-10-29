@@ -1,6 +1,6 @@
 import { sql } from '@pgtyped/query'
-import { getArgument } from '../getArgument'
-import { SessionContext } from '../sessionContext'
+import { getArgument } from 'src/bot/getArgument'
+import { SessionContext } from 'src/bot/sessionContext'
 import { IDeleteSubscriptionQuery } from './unsubscribe.types'
 
 const deleteSubscription = sql<IDeleteSubscriptionQuery>`

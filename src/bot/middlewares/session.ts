@@ -1,6 +1,6 @@
 import { sql } from '@pgtyped/query'
 import { Middleware } from 'telegraf'
-import { SessionContext } from '../sessionContext'
+import { SessionContext } from 'src/bot/sessionContext'
 import { IGetSessionQuery, ISetSessionQuery } from './session.types'
 
 const getSession = sql<IGetSessionQuery>`
