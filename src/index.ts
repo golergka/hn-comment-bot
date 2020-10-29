@@ -8,22 +8,11 @@ import {
 	IGetSubscribedRootQuery,
 	IGetSubscribedUserQuery,
 	IGetSubscribedUsersQuery,
-	IGetUnnotifiedPostsQuery,
-	IMarkOutdatedPostsQuery,
-	ISetPostsNotifiedQuery
+	IMarkOutdatedPostsQuery
 } from './index.types'
 import { pg, tx } from './pg'
-import Telegraf from 'telegraf'
-import { promisify } from 'util'
-import { decode } from 'he'
 import { loadHNItem, ItemID, loadHNUser, Item } from './hnApi'
-import { txMiddleware } from './middlewares/tx'
-import { SessionContext } from './sessionContext'
-import { sessionMiddleware } from './middlewares/session'
-import { subscribe } from './commands/subscribe'
-import { getArgument } from './getArgument'
-import { subscriptions } from './commands/subscriptions'
-import { unsubscribe } from './commands/unsubscribe'
+import { notificationSendLoop } from './notificationSendLoop'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
@@ -85,49 +74,10 @@ async function updateUser(hnUsername: string): Promise<void> {
 	}
 }
 
-const { TELEGRAM_BOT_TOKEN } = process.env
-if (!TELEGRAM_BOT_TOKEN) {
-	throw new Error('Must specify TELEGRAM_BOT_TOKEN')
-}
-
-const bot = new Telegraf(TELEGRAM_BOT_TOKEN)
-
-// All db handling in one transaction
-bot.use(txMiddleware)
-
-// Minimal postgres-based middleware
-bot.use(sessionMiddleware)
-
-// Logging chat details into db just in case
-bot.use(async (ctx: SessionContext, next) => {
-	const chat = await ctx.getChat()
-	if (chat) {
-		ctx.session = {
-			chat,
-			...ctx.session
-		}
-	}
-	await next()
-})
-
-bot.start(({ reply }) =>
-	reply(
-		'This bot will allow you to get updates about new comment replies on Hacker News. Use command /subscribe {username} to with your HN username to subscribe to new comments.'
-	)
-)
-
 const getAllSubscriptions = sql<IGetAllSubscriptionsQuery>`
 	SELECT hn_user_id, tg_user_chat_id, subscribed_at
 	FROM tg_subscriptions
 `
-
-bot.command('subscribe', subscribe)
-
-bot.command('subscriptions', subscriptions)
-
-bot.command('unsubscribe', unsubscribe)
-
-bot.launch()
 
 const getSubscribedUsers = sql<IGetSubscribedUsersQuery>`
 	SELECT hn_user_id
@@ -147,24 +97,6 @@ async function checkAllUsers() {
 	await markOutdatedPosts.run(undefined, pg)
 	console.log('All users checked.')
 }
-
-const getUnnotifiedPosts = sql<IGetUnnotifiedPostsQuery>`
-	SELECT
-		hn_kids.id AS "itemId",
-		tg_subscriptions.tg_user_chat_id AS "chatId"
-	FROM hn_kids
-		LEFT JOIN hn_submitted ON hn_kids.parent_id = hn_submitted.id
-		INNER JOIN tg_subscriptions ON hn_submitted.hn_user_id = tg_subscriptions.hn_user_id
-	WHERE
-		NOT hn_kids.notified AND
-		hn_kids.posted_at > tg_subscriptions.subscribed_at
-`
-
-const setPostsNotified = sql<ISetPostsNotifiedQuery>`
-	UPDATE hn_kids
-	SET notified = TRUE
-	WHERE id IN $$ids
-`
 
 const markOutdatedPosts = sql<IMarkOutdatedPostsQuery>`
 	WITH emptyIds AS (
@@ -188,36 +120,7 @@ const markOutdatedPosts = sql<IMarkOutdatedPostsQuery>`
 	FROM emptyIds
 `
 
-async function loopSendNotifications() {
-	// eslint-disable-next-line no-constant-condition
-	while (true) {
-		const empty = await tx(
-			async (db): Promise<boolean> => {
-				const unnotified = await getUnnotifiedPosts.run(undefined, db)
-				if (unnotified.length === 0) {
-					return true
-				}
-				await Promise.all<unknown>([
-					setPostsNotified.run({ ids: unnotified.map((u) => u.itemId) }, db),
-					...unnotified.map(async (u) => {
-						const item = await loadHNItem(u.itemId)
-						const text = decode(item.text || '').replace(/<p>/g, '\n')
-						bot.telegram.sendMessage(
-							u.chatId,
-							`You have received comment:\n${text}`
-						)
-					})
-				])
-				return false
-			}
-		)
-		if (empty) {
-			await promisify(setTimeout)(1000)
-		}
-	}
-}
-
-loopSendNotifications()
+notificationSendLoop()
 
 const getSubscribedUser = sql<IGetSubscribedUserQuery>`
 	SELECT id
