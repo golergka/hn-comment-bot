@@ -1,6 +1,6 @@
 import { pg } from './pg'
 import { chunk, concat, chain } from 'lodash'
-import { Item, ItemID, loadHNItem, loadHNUser } from './hnApi'
+import { isItemArchived, Item, ItemID, loadHNItem, loadHNUser } from './hnApi'
 import { sql } from '@pgtyped/query'
 import {
 	ICreateKidsQuery,
@@ -61,21 +61,24 @@ async function checkRoots(
 	await checkKids(submitted)
 }
 
+async function getActiveItems(itemIds: number[]): Promise<Item[]> {
+	const result: Item[] = []
+	for (const id of itemIds) {
+		const item = await loadHNItem(id)
+		if (isItemArchived(item)) {
+			break
+		}
+		result.push(item)
+	}
+	return result
+}
+
 async function checkUser(hnUsername: string): Promise<void> {
 	console.log(`Checking user ${hnUsername}`)
 	const hnUser: { submitted?: ItemID[] } = await loadHNUser(hnUsername)
-	const activePromise = chain(hnUser.submitted || [])
-		.map(loadHNItem)
-		.takeWhile(async (i) => {
-			const itemTime = DateTime.fromJSDate(new Date((await i).time * 1000))
-			const elapsed = itemTime.diffNow()
-			return elapsed > Duration.fromObject({ weeks: -2 })
-		})
-		.value()
-	const active = await Promise.all(activePromise)
-	console.log(
-		`active ${active.length} out of ${hnUser.submitted?.length || 0} submitted`
-	)
+	const submittedIds = hnUser.submitted || []
+	const active = await getActiveItems(submittedIds)
+	console.log(`active ${active.length} out of ${submittedIds.length} submitted`)
 	const chunks = chunk(active, 10)
 	for (const c of chunks) {
 		await checkRoots(hnUsername, c)
