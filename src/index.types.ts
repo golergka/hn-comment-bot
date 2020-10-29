@@ -230,3 +230,35 @@ export interface IMarkOutdatedPostsQuery {
 	params: IMarkOutdatedPostsParams
 	result: IMarkOutdatedPostsResult
 }
+
+/** 'GetSubscribedUser' parameters type */
+export interface IGetSubscribedUserParams {
+	id: string | null | void
+}
+
+/** 'GetSubscribedUser' return type */
+export interface IGetSubscribedUserResult {
+	id: string
+}
+
+/** 'GetSubscribedUser' query type */
+export interface IGetSubscribedUserQuery {
+	params: IGetSubscribedUserParams
+	result: IGetSubscribedUserResult
+}
+
+/** 'GetSubscribedRoot' parameters type */
+export interface IGetSubscribedRootParams {
+	id: number | null | void
+}
+
+/** 'GetSubscribedRoot' return type */
+export interface IGetSubscribedRootResult {
+	id: number
+}
+
+/** 'GetSubscribedRoot' query type */
+export interface IGetSubscribedRootQuery {
+	params: IGetSubscribedRootParams
+	result: IGetSubscribedRootResult
+}

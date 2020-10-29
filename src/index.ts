@@ -10,6 +10,8 @@ import {
 	IGetAllSubscriptionsQuery,
 	IGetHnUserQuery,
 	IGetSessionQuery,
+	IGetSubscribedRootQuery,
+	IGetSubscribedUserQuery,
 	IGetSubscribedUsersQuery,
 	IGetSubscriptionsByUserQuery,
 	IGetUnnotifiedPostsQuery,
@@ -393,6 +395,76 @@ async function loopSendNotifications() {
 
 loopSendNotifications()
 
+const getSubscribedUser = sql<IGetSubscribedUserQuery>`
+	SELECT id
+	FROM hn_users
+	INNER JOIN tg_subscriptions ON hn_users.id = tg_subscriptions.hn_user_id
+	WHERE id = $id
+	LIMIT 1
+`
+
+function checkItemRoot(item: Item) {
+	return tx(async (db) => {
+		const subscribedUser = await getSubscribedUser.run(
+			{
+				id: item.by
+			},
+			db
+		)
+		if (subscribedUser.length === 0) {
+			return
+		}
+		await createRoots.run(
+			{
+				roots: [
+					{
+						hnUsername: item.by,
+						id: item.id
+					}
+				]
+			},
+			db
+		)
+	})
+}
+
+const getSubscribedRoot = sql<IGetSubscribedRootQuery>`
+	SELECT id
+	FROM hn_submitted
+	INNER JOIN tg_subscriptions ON tg_subscriptions.hn_user_id = hn_submitted.hn_user_id
+	WHERE id = $id
+	LIMIT 1
+`
+
+function checkItemKid(item: Item) {
+	return tx(async (db) => {
+		if (!item.parent) {
+			return
+		}
+		const subscribedRoots = await getSubscribedRoot.run(
+			{
+				id: item.parent
+			},
+			db
+		)
+		if (subscribedRoots.length === 0) {
+			return
+		}
+		await createKids.run(
+			{
+				kids: [
+					{
+						id: item.id,
+						parentId: item.parent,
+						postedAt: new Date(item.time * 1000)
+					}
+				]
+			},
+			db
+		)
+	})
+}
+
 async function checkStream() {
 	const hnStream = got.stream(
 		'https://hacker-news.firebaseio.com/v0/updates.json',
@@ -403,21 +475,29 @@ async function checkStream() {
 			}
 		}
 	)
-	hnStream.pipe(process.stdout)
-	hnStream.on('end', () => {
-		console.log('Stream closed')
+	hnStream.on('data', async (chunk: Buffer) => {
+		const lines = chunk.toString().split('\n', 2)
+		const event = lines[0].split(': ', 2)[1]
+		if (event !== 'put') {
+			return
+		}
+		const {
+			data: { items: itemIds }
+		} = JSON.parse(lines[1].split(': ', 2)[1]) as {
+			data: {
+				items: number[]
+			}
+		}
+		const items = await Promise.all(itemIds.map(loadHNItem))
+		// This order is crucial
+		await Promise.all(items.map(checkItemRoot))
+		await Promise.all(items.map(checkItemKid))
 	})
-	/*
-	await promisify(stream.pipeline)(
-		process.stdout
-	)
-	console.log('Stream closed')
-	*/
 }
 
 ;(async () => {
 	try {
-		await checkAllUsers()
+		// await checkAllUsers()
 		await checkStream()
 	} catch (err) {
 		console.error('exception', err)
