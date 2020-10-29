@@ -1,6 +1,6 @@
 import { pg } from './pg'
-import { chunk, concat } from 'lodash'
-import { ItemID, loadHNItem, loadHNUser } from './hnApi'
+import { chunk, concat, chain } from 'lodash'
+import { Item, ItemID, loadHNItem, loadHNUser } from './hnApi'
 import { sql } from '@pgtyped/query'
 import {
 	ICreateKidsQuery,
@@ -8,6 +8,7 @@ import {
 	IGetSubscribedUsersQuery,
 	IMarkOutdatedPostsQuery
 } from './serverRestartCheck.types'
+import { DateTime, Duration } from 'luxon'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
@@ -22,11 +23,10 @@ const createKids = sql<ICreateKidsQuery>`
 	RETURNING parent_id, id
 `
 
-async function checkKids(submitted: number[]): Promise<void> {
-	const hnRoots = await Promise.all(submitted.map(loadHNItem))
+async function checkKids(submitted: Item[]): Promise<void> {
 	const kids = concat(
 		[],
-		...hnRoots.map((r) =>
+		...submitted.map((r) =>
 			(r.kids || []).map((k) => ({
 				id: k,
 				parentId: r.id,
@@ -46,12 +46,15 @@ async function checkKids(submitted: number[]): Promise<void> {
 
 async function checkRoots(
 	hnUsername: string,
-	submitted: number[]
+	submitted: Item[]
 ): Promise<void> {
 	console.log(`Checking posts ${JSON.stringify(submitted)}`)
 	await createRoots.run(
 		{
-			roots: submitted.map((id) => ({ hnUsername, id }))
+			roots: submitted.map((item) => ({
+				hnUsername,
+				id: item.id
+			}))
 		},
 		pg
 	)
@@ -61,9 +64,17 @@ async function checkRoots(
 async function checkUser(hnUsername: string): Promise<void> {
 	console.log(`Checking user ${hnUsername}`)
 	const hnUser: { submitted?: ItemID[] } = await loadHNUser(hnUsername)
-	const submitted = hnUser.submitted || []
-	const chunks = chunk(submitted, 10)
-
+	const activePromise = chain(hnUser.submitted || [])
+		.map(loadHNItem)
+		.takeWhile(async (i) => {
+			const itemTime = DateTime.fromJSDate(new Date((await i).time * 1000))
+			const elapsed = itemTime.diffNow()
+			return elapsed > Duration.fromObject({ weeks: -2 })
+		})
+		.value()
+	const active = await Promise.all(activePromise)
+	console.log('active submitted', active)
+	const chunks = chunk(active, 10)
 	for (const c of chunks) {
 		await checkRoots(hnUsername, c)
 	}
