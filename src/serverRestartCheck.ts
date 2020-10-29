@@ -48,7 +48,7 @@ async function checkRoots(
 	hnUsername: string,
 	submitted: Item[]
 ): Promise<void> {
-	console.log(`Checking posts ${JSON.stringify(submitted)}`)
+	console.log(`Checking posts ${JSON.stringify(submitted.map((s) => s.id))}`)
 	await createRoots.run(
 		{
 			roots: submitted.map((item) => ({
