@@ -25,19 +25,7 @@ import { TelegrafContext } from 'telegraf/typings/context'
 import { PoolClient } from 'pg'
 import { promisify } from 'util'
 import { decode } from 'he'
-
-export interface Item {
-	id: ItemID
-	parent: ItemID
-	by: string
-	// title?: string
-	text?: string
-	kids?: ItemID[]
-	time: number
-	// type: "job"|"story"|"comment"|"poll"|"pollopt"
-}
-
-export type ItemID = number
+import { loadHNItem, ItemID, loadHNUser, Item } from './hnApi'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
@@ -51,25 +39,6 @@ const createKids = sql<ICreateKidsQuery>`
 	ON CONFLICT (id) DO NOTHING
 	RETURNING parent_id, id
 `
-
-async function loadHNItem(itemID: ItemID) {
-	const { body } = await got<Item>(
-		`https://hacker-news.firebaseio.com/v0/item/${itemID}.json`,
-		{
-			responseType: 'json'
-		}
-	)
-	return body
-}
-
-async function loadHNUser(username: string): Promise<{ submitted?: ItemID[] }> {
-	const { body } = await got<{
-		submitted?: ItemID[]
-	}>(`https://hacker-news.firebaseio.com/v0/user/${username}.json?`, {
-		responseType: 'json'
-	})
-	return body
-}
 
 async function updateKids(submitted: number[]): Promise<void> {
 	const hnRoots = await Promise.all(submitted.map(loadHNItem))
