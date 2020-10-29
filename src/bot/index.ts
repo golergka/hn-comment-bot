@@ -1,4 +1,5 @@
 import Telegraf from 'telegraf'
+import { Command } from './command'
 import { subscribe } from './commands/subscribe'
 import { subscriptions } from './commands/subscriptions'
 import { unsubscribe } from './commands/unsubscribe'
@@ -37,10 +38,12 @@ bot.start(({ reply }) =>
 	)
 )
 
-bot.command('subscribe', subscribe)
+const commands = [subscribe, subscriptions, unsubscribe]
 
-bot.command('subscriptions', subscriptions)
+for (const c of commands) {
+	bot.command(c.command, c.middleware)
+}
 
-bot.command('unsubscribe', unsubscribe)
+bot.telegram.setMyCommands(commands)
 
 bot.launch()
