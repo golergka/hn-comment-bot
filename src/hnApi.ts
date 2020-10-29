@@ -32,7 +32,7 @@ export function hnUrl(itemID: ItemID): string {
 export function isItemArchived(item: Item): boolean {
 	const itemTime = DateTime.fromJSDate(new Date(item.time * 1000))
 	const elapsed = itemTime.diffNow()
-	return elapsed > Duration.fromObject({ weeks: -2 })
+	return elapsed < Duration.fromObject({ weeks: -2 })
 }
 
 export async function loadHNItem<T extends BaseItem = Item>(

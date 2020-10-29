@@ -1,5 +1,5 @@
 import { pg } from './pg'
-import { chunk, concat, chain } from 'lodash'
+import { chunk, concat } from 'lodash'
 import { isItemArchived, Item, ItemID, loadHNItem, loadHNUser } from './hnApi'
 import { sql } from '@pgtyped/query'
 import {
@@ -8,7 +8,6 @@ import {
 	IGetSubscribedUsersQuery,
 	IMarkOutdatedPostsQuery
 } from './serverRestartCheck.types'
-import { DateTime, Duration } from 'luxon'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
