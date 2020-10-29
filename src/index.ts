@@ -495,10 +495,10 @@ async function checkStream() {
 	})
 }
 
+checkStream()
 ;(async () => {
 	try {
-		// await checkAllUsers()
-		await checkStream()
+		await checkAllUsers()
 	} catch (err) {
 		console.error('exception', err)
 		throw err
