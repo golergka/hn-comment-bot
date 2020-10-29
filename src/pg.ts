@@ -8,14 +8,15 @@ import {
 } from 'pg'
 import { as as queryFormat } from 'pg-promise'
 
-const { POSTGRES_URL } = process.env
+const { POSTGRES_URL, DATABASE_URL } = process.env
+const databaseUrl = POSTGRES_URL || DATABASE_URL
 
-if (!POSTGRES_URL) {
-	throw new Error('Must specify POSTGRES_URL')
+if (!databaseUrl) {
+	throw new Error('Must specify POSTGRES_URL or DATABASE_URL')
 }
 
 export const pg = new Pool({
-	connectionString: POSTGRES_URL,
+	connectionString: databaseUrl,
 	max: 10
 })
 
