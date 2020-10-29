@@ -1,4 +1,4 @@
-/** Types generated for queries found in "./src/sessionMiddleware.ts" */
+/** Types generated for queries found in "./src/middlewares/session.ts" */
 export type Json =
 	| null
 	| boolean

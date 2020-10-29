@@ -1,4 +1,3 @@
-import { sql } from '@pgtyped/query'
 import { Middleware } from 'telegraf'
 import { tx } from '../pg'
 import { SessionContext } from '../sessionContext'

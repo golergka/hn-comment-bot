@@ -38,71 +38,6 @@ export interface ICreateKidsQuery {
 	result: ICreateKidsResult
 }
 
-/** 'GetHnUser' parameters type */
-export interface IGetHnUserParams {
-	hnUsername: string | null | void
-}
-
-/** 'GetHnUser' return type */
-export interface IGetHnUserResult {
-	id: string
-}
-
-/** 'GetHnUser' query type */
-export interface IGetHnUserQuery {
-	params: IGetHnUserParams
-	result: IGetHnUserResult
-}
-
-/** 'CreateHnUser' parameters type */
-export interface ICreateHnUserParams {
-	hnUsername: string | null | void
-}
-
-/** 'CreateHnUser' return type */
-export type ICreateHnUserResult = void
-
-/** 'CreateHnUser' query type */
-export interface ICreateHnUserQuery {
-	params: ICreateHnUserParams
-	result: ICreateHnUserResult
-}
-
-/** 'CreateSubscription' parameters type */
-export interface ICreateSubscriptionParams {
-	tgUserChatId: number | null | void
-	hnUserId: string | null | void
-}
-
-/** 'CreateSubscription' return type */
-export interface ICreateSubscriptionResult {
-	tg_user_chat_id: number
-	hn_user_id: string
-	subscribed_at: Date
-}
-
-/** 'CreateSubscription' query type */
-export interface ICreateSubscriptionQuery {
-	params: ICreateSubscriptionParams
-	result: ICreateSubscriptionResult
-}
-
-/** 'GetSubscriptionsByUser' parameters type */
-export interface IGetSubscriptionsByUserParams {
-	tgUserChatId: number | null | void
-}
-
-/** 'GetSubscriptionsByUser' return type */
-export interface IGetSubscriptionsByUserResult {
-	hn_user_id: string
-}
-
-/** 'GetSubscriptionsByUser' query type */
-export interface IGetSubscriptionsByUserQuery {
-	params: IGetSubscriptionsByUserParams
-	result: IGetSubscriptionsByUserResult
-}
-
 /** 'GetAllSubscriptions' parameters type */
 export type IGetAllSubscriptionsParams = void
 
@@ -117,25 +52,6 @@ export interface IGetAllSubscriptionsResult {
 export interface IGetAllSubscriptionsQuery {
 	params: IGetAllSubscriptionsParams
 	result: IGetAllSubscriptionsResult
-}
-
-/** 'DeleteSubscription' parameters type */
-export interface IDeleteSubscriptionParams {
-	tgUserChatId: number | null | void
-	hnUserId: string | null | void
-}
-
-/** 'DeleteSubscription' return type */
-export interface IDeleteSubscriptionResult {
-	tg_user_chat_id: number
-	hn_user_id: string
-	subscribed_at: Date
-}
-
-/** 'DeleteSubscription' query type */
-export interface IDeleteSubscriptionQuery {
-	params: IDeleteSubscriptionParams
-	result: IDeleteSubscriptionResult
 }
 
 /** 'GetSubscribedUsers' parameters type */

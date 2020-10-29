@@ -2,17 +2,12 @@ import { concat, chunk } from 'lodash'
 import got from 'got'
 import { sql } from '@pgtyped/query'
 import {
-	ICreateHnUserQuery,
 	ICreateKidsQuery,
 	ICreateRootsQuery,
-	ICreateSubscriptionQuery,
-	IDeleteSubscriptionQuery,
 	IGetAllSubscriptionsQuery,
-	IGetHnUserQuery,
 	IGetSubscribedRootQuery,
 	IGetSubscribedUserQuery,
 	IGetSubscribedUsersQuery,
-	IGetSubscriptionsByUserQuery,
 	IGetUnnotifiedPostsQuery,
 	IMarkOutdatedPostsQuery,
 	ISetPostsNotifiedQuery
@@ -22,9 +17,13 @@ import Telegraf from 'telegraf'
 import { promisify } from 'util'
 import { decode } from 'he'
 import { loadHNItem, ItemID, loadHNUser, Item } from './hnApi'
-import { txMiddleware } from './middlewares/txMiddleware'
+import { txMiddleware } from './middlewares/tx'
 import { SessionContext } from './sessionContext'
-import { sessionMiddleware } from './middlewares/sessionMiddleware'
+import { sessionMiddleware } from './middlewares/session'
+import { subscribe } from './commands/subscribe'
+import { getArgument } from './getArgument'
+import { subscriptions } from './commands/subscriptions'
+import { unsubscribe } from './commands/unsubscribe'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
@@ -117,122 +116,16 @@ bot.start(({ reply }) =>
 	)
 )
 
-const getHNUser = sql<IGetHnUserQuery>`
-	SELECT id
-	FROM hn_users
-	WHERE id = $hnUsername
-`
-
-const createHNUser = sql<ICreateHnUserQuery>`
-	INSERT INTO hn_users (id)
-	VALUES ($hnUsername)
-`
-
-const createSubscription = sql<ICreateSubscriptionQuery>`
-	INSERT INTO tg_subscriptions (tg_user_chat_id, hn_user_id)
-	VALUES ($tgUserChatId, $hnUserId)
-	ON CONFLICT (tg_user_chat_id, hn_user_id) DO NOTHING
-	RETURNING *
-`
-
-const getSubscriptionsByUser = sql<IGetSubscriptionsByUserQuery>`
-	SELECT hn_user_id
-	FROM tg_subscriptions
-	WHERE tg_user_chat_id = $tgUserChatId
-`
-
 const getAllSubscriptions = sql<IGetAllSubscriptionsQuery>`
 	SELECT hn_user_id, tg_user_chat_id, subscribed_at
 	FROM tg_subscriptions
 `
 
-const deleteSubscription = sql<IDeleteSubscriptionQuery>`
-	DELETE
-	FROM tg_subscriptions
-	WHERE tg_user_chat_id = $tgUserChatId AND 
-		hn_user_id = $hnUserId
-	RETURNING *
-`
+bot.command('subscribe', subscribe)
 
-function getArgument(ctx: SessionContext, index: number): string | undefined {
-	if (!ctx.message?.text) {
-		throw new Error(`can't get message text`)
-	}
-	const split = ctx.message.text.split(' ')
-	return split[index]
-}
+bot.command('subscriptions', subscriptions)
 
-bot.command('subscribe', async (ctx: SessionContext) => {
-	const hnUsername = getArgument(ctx, 1)
-	if (!hnUsername) {
-		await ctx.reply('Please specify username to subscribe to')
-		return
-	}
-
-	const [check, _] = await Promise.all([
-		getHNUser.run({ hnUsername }, ctx.db!),
-		ctx.reply(`Checking username ${hnUsername}...`)
-	])
-	if (!check || check.length === 0) {
-		const hnUser = await loadHNUser(hnUsername)
-		if (!hnUser) {
-			await ctx.reply(
-				`Can't find HN user ${hnUsername}. Are you sure you spelled username right?`
-			)
-			return
-		}
-		await createHNUser.run({ hnUsername }, ctx.db!)
-	}
-
-	const [created] = await createSubscription.run(
-		{ tgUserChatId: ctx.session!.chat!.id, hnUserId: hnUsername },
-		ctx.db!
-	)
-	if (!created) {
-		await ctx.reply(
-			`You're already subscribed to ${hnUsername}! Use /subscriptions to check the list of existing subscriptions`
-		)
-		return
-	}
-
-	await ctx.reply(
-		`Subscriedb to ${hnUsername}. Use command /unsubscribe to remove subscription.`
-	)
-})
-
-bot.command('subscriptions', async (ctx: SessionContext) => {
-	const subscriptions = await getSubscriptionsByUser.run(
-		{
-			tgUserChatId: ctx.chat!.id!
-		},
-		ctx.db!
-	)
-	const userIds = subscriptions.map((s) => s.hn_user_id)
-	await ctx.reply(
-		userIds.length > 0
-			? `You're subscribed to: ${userIds.join(', ')}`
-			: `You're not subscribed to anyone.`
-	)
-})
-
-bot.command('unsubscribe', async (ctx: SessionContext) => {
-	const hnUsername = getArgument(ctx, 1)
-	if (!hnUsername) {
-		await ctx.reply('Please specify username to unsubscribe from')
-		return
-	}
-
-	const deleted = await deleteSubscription.run(
-		{ tgUserChatId: ctx.session!.chat!.id, hnUserId: hnUsername },
-		ctx.db!
-	)
-
-	await ctx.reply(
-		deleted.length > 0
-			? `Unsubscribed from ${hnUsername}. Use command /subscribe to subscribe back.`
-			: `You haven't been subscribed to ${hnUsername}. Check /subscriptions to check your active subscriptions.`
-	)
-})
+bot.command('unsubscribe', unsubscribe)
 
 bot.launch()
 
