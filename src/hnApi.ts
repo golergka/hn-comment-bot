@@ -2,25 +2,50 @@ import got from 'got'
 
 export type ItemID = number
 
-export interface Item {
+interface BaseItem {
 	id: ItemID
-	parent: ItemID
 	by: string
-	// title?: string
-	text?: string
 	kids?: ItemID[]
 	time: number
-	// type: "job"|"story"|"comment"|"poll"|"pollopt"
 }
 
-export async function loadHNItem(itemID: ItemID) {
-	const { body } = await got<Item>(
+export interface Story extends BaseItem {
+	descendants: number
+	score: number
+	title: string
+	type: 'story'
+}
+
+export interface Comment extends BaseItem {
+	text: string
+	parent: ItemID
+	type: 'comment'
+}
+
+export type Item = Story | Comment
+
+export function hnUrl(itemID: ItemID): string {
+	return `https://news.ycombinator.com/item?id=${itemID}`
+}
+
+export async function loadHNItem<T extends BaseItem = Item>(
+	itemID: ItemID
+): Promise<T> {
+	const { body } = await got<T>(
 		`https://hacker-news.firebaseio.com/v0/item/${itemID}.json`,
 		{
 			responseType: 'json'
 		}
 	)
 	return body
+}
+
+export async function loadHNRoot(item: Item): Promise<Story> {
+	if (item.type === 'story') {
+		return item
+	}
+	const parentItem = await loadHNItem(item.parent)
+	return loadHNRoot(parentItem)
 }
 
 export async function loadHNUser(

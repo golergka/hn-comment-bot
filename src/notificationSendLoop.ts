@@ -1,13 +1,14 @@
 import { tx } from './pg'
 import { promisify } from 'util'
 import { decode } from 'he'
-import { loadHNItem } from './hnApi'
+import { Comment, hnUrl, loadHNItem, loadHNRoot as loadHNStory } from './hnApi'
 import {
 	IGetUnnotifiedPostsQuery,
 	ISetPostsNotifiedQuery
 } from './notificationSendLoop.types'
 import { sql } from '@pgtyped/query'
 import { bot } from './bot'
+import { DateTime } from 'luxon'
 
 const getUnnotifiedPosts = sql<IGetUnnotifiedPostsQuery>`
 	SELECT
@@ -43,11 +44,22 @@ export async function notificationSendLoop() {
 				await Promise.all<unknown>([
 					setPostsNotified.run({ ids: unnotified.map((u) => u.itemId) }, db),
 					...unnotified.map(async (u) => {
-						const item = await loadHNItem(u.itemId)
-						const text = decode(item.text || '').replace(/<p>/g, '\n')
+						const item = await loadHNItem<Comment>(u.itemId)
+						const root = await loadHNStory(item)
+						const text = decode(item.text || '').replace(/<p>/g, '\n\n')
+						const jsDate = new Date(item.time * 1000)
+						const date = DateTime.fromJSDate(jsDate)
+						const dateText = date.toLocaleString(DateTime.DATETIME_MED)
 						bot.telegram.sendMessage(
 							u.chatId,
-							`You have received comment:\n${text}`
+							`Re: [${root.title}](${hnUrl(root.id)})\n` +
+								`\n\n` +
+								text +
+								'\n\n' +
+								`${item.by}, [${dateText}](${hnUrl(item.id)})`,
+							{
+								parse_mode: 'MarkdownV2'
+							}
 						)
 					})
 				])

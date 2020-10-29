@@ -65,7 +65,7 @@ const getSubscribedRoot = sql<IGetSubscribedRootQuery>`
 
 function checkItemKid(item: Item) {
 	return tx(async (db) => {
-		if (!item.parent) {
+		if (item.type !== 'comment') {
 			return
 		}
 		const subscribedRoots = await getSubscribedRoot.run(
