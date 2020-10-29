@@ -73,7 +73,9 @@ async function checkUser(hnUsername: string): Promise<void> {
 		})
 		.value()
 	const active = await Promise.all(activePromise)
-	console.log('active submitted', active)
+	console.log(
+		`active ${active.length} out of ${hnUser.submitted?.length || 0} submitted`
+	)
 	const chunks = chunk(active, 10)
 	for (const c of chunks) {
 		await checkRoots(hnUsername, c)
