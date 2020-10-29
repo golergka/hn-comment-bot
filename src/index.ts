@@ -9,23 +9,22 @@ import {
 	IDeleteSubscriptionQuery,
 	IGetAllSubscriptionsQuery,
 	IGetHnUserQuery,
-	IGetSessionQuery,
 	IGetSubscribedRootQuery,
 	IGetSubscribedUserQuery,
 	IGetSubscribedUsersQuery,
 	IGetSubscriptionsByUserQuery,
 	IGetUnnotifiedPostsQuery,
 	IMarkOutdatedPostsQuery,
-	ISetPostsNotifiedQuery,
-	ISetSessionQuery
+	ISetPostsNotifiedQuery
 } from './index.types'
 import { pg, tx } from './pg'
 import Telegraf from 'telegraf'
-import { TelegrafContext } from 'telegraf/typings/context'
-import { PoolClient } from 'pg'
 import { promisify } from 'util'
 import { decode } from 'he'
 import { loadHNItem, ItemID, loadHNUser, Item } from './hnApi'
+import { txMiddleware } from './middlewares/txMiddleware'
+import { SessionContext } from './sessionContext'
+import { sessionMiddleware } from './middlewares/sessionMiddleware'
 
 const createRoots = sql<ICreateRootsQuery>`
 	INSERT INTO hn_submitted (hn_user_id, id)
@@ -94,48 +93,11 @@ if (!TELEGRAM_BOT_TOKEN) {
 
 const bot = new Telegraf(TELEGRAM_BOT_TOKEN)
 
-const getSession = sql<IGetSessionQuery>`
-	SELECT session
-	FROM tg_users
-	WHERE chat_id = $chatId
-	FOR UPDATE
-`
-
-const setSession = sql<ISetSessionQuery>`
-	INSERT INTO tg_users (chat_id, session)
-	VALUES ($chatId, $session)
-	ON CONFLICT (chat_id) DO UPDATE SET session = $session
-`
-
-interface SessionContext extends TelegrafContext {
-	db?: PoolClient
-	session?: any
-}
-
 // All db handling in one transaction
-bot.use(async (ctx: SessionContext, next) => {
-	await tx(async (db) => {
-		ctx.db = db
-		await next()
-		ctx.db = undefined
-	})
-})
+bot.use(txMiddleware)
 
 // Minimal postgres-based middleware
-bot.use(async (ctx: SessionContext, next) => {
-	// Only support private chats
-	if (!ctx.chat || ctx.chat?.type !== 'private') {
-		return next()
-	}
-	const chatId = ctx.chat.id
-	const result = await getSession.run({ chatId }, ctx.db!)
-	ctx.session = result[0]?.session || {}
-
-	await next()
-
-	await setSession.run({ chatId, session: ctx.session }, ctx.db!)
-	ctx.session = undefined
-})
+bot.use(sessionMiddleware)
 
 // Logging chat details into db just in case
 bot.use(async (ctx: SessionContext, next) => {
