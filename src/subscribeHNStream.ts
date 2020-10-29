@@ -115,6 +115,7 @@ export function subscribeHNStream() {
 				items: number[]
 			}
 		}
+		console.log(`new item ids`, itemIds)
 		const items = await Promise.all(itemIds.map(loadHNItem))
 		// This order is crucial
 		await Promise.all(items.map(checkItemRoot))

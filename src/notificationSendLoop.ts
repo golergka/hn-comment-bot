@@ -1,6 +1,5 @@
 import { tx } from './pg'
 import { promisify } from 'util'
-import { decode } from 'he'
 import { Comment, hnUrl, loadHNItem, loadHNRoot as loadHNStory } from './hnApi'
 import {
 	IGetUnnotifiedPostsQuery,
@@ -9,6 +8,7 @@ import {
 import { sql } from '@pgtyped/query'
 import { bot } from './bot'
 import { DateTime } from 'luxon'
+import { Extra } from 'telegraf'
 
 const getUnnotifiedPosts = sql<IGetUnnotifiedPostsQuery>`
 	SELECT
@@ -46,21 +46,19 @@ export async function notificationSendLoop() {
 					...unnotified.map(async (u) => {
 						const item = await loadHNItem<Comment>(u.itemId)
 						const root = await loadHNStory(item)
-						const text = decode(item.text || '').replace(/<p>/g, '\n\n')
 						const jsDate = new Date(item.time * 1000)
 						const date = DateTime.fromJSDate(jsDate)
 						const dateText = date.toLocaleString(DateTime.DATETIME_MED)
-						bot.telegram.sendMessage(
-							u.chatId,
-							`Re: [${root.title}](${hnUrl(root.id)})\n` +
-								`\n\n` +
-								text +
-								'\n\n' +
-								`${item.by}, [${dateText}](${hnUrl(item.id)})`,
-							{
-								parse_mode: 'MarkdownV2'
-							}
-						)
+						const messageText =
+							`Re: <a href="${hnUrl(root.id)}">${root.title}</a>` +
+							`<p>` +
+							item.text +
+							'<p>' +
+							`${item.by}, <a href="${hnUrl(item.id)}">${dateText}</a>`
+						bot.telegram.sendMessage(u.chatId, messageText, {
+							parse_mode: 'HTML'
+						})
+						Extra.markup
 					})
 				])
 				return false
