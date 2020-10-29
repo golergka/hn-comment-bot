@@ -16,7 +16,7 @@ if (!POSTGRES_URL) {
 
 export const pg = new Pool({
 	connectionString: POSTGRES_URL,
-	max: 300
+	max: 10
 })
 
 const originalClientQuery = Client.prototype.query
