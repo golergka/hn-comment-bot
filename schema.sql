@@ -17,16 +17,16 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: postgres
+-- Name: public; Type: SCHEMA; Schema: -; Owner: db
 --
 
 CREATE SCHEMA public;
 
 
-ALTER SCHEMA public OWNER TO postgres;
+ALTER SCHEMA public OWNER TO db;
 
 --
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: postgres
+-- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: db
 --
 
 COMMENT ON SCHEMA public IS 'standard public schema';
@@ -37,7 +37,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: hn_kids; Type: TABLE; Schema: public; Owner: postgres
+-- Name: hn_kids; Type: TABLE; Schema: public; Owner: db
 --
 
 CREATE TABLE public.hn_kids (
@@ -48,10 +48,10 @@ CREATE TABLE public.hn_kids (
 );
 
 
-ALTER TABLE public.hn_kids OWNER TO postgres;
+ALTER TABLE public.hn_kids OWNER TO db;
 
 --
--- Name: hn_submitted; Type: TABLE; Schema: public; Owner: postgres
+-- Name: hn_submitted; Type: TABLE; Schema: public; Owner: db
 --
 
 CREATE TABLE public.hn_submitted (
@@ -60,10 +60,10 @@ CREATE TABLE public.hn_submitted (
 );
 
 
-ALTER TABLE public.hn_submitted OWNER TO postgres;
+ALTER TABLE public.hn_submitted OWNER TO db;
 
 --
--- Name: hn_users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: hn_users; Type: TABLE; Schema: public; Owner: db
 --
 
 CREATE TABLE public.hn_users (
@@ -71,10 +71,10 @@ CREATE TABLE public.hn_users (
 );
 
 
-ALTER TABLE public.hn_users OWNER TO postgres;
+ALTER TABLE public.hn_users OWNER TO db;
 
 --
--- Name: tg_subscriptions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: tg_subscriptions; Type: TABLE; Schema: public; Owner: db
 --
 
 CREATE TABLE public.tg_subscriptions (
@@ -84,10 +84,10 @@ CREATE TABLE public.tg_subscriptions (
 );
 
 
-ALTER TABLE public.tg_subscriptions OWNER TO postgres;
+ALTER TABLE public.tg_subscriptions OWNER TO db;
 
 --
--- Name: tg_users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: tg_users; Type: TABLE; Schema: public; Owner: db
 --
 
 CREATE TABLE public.tg_users (
@@ -96,10 +96,10 @@ CREATE TABLE public.tg_users (
 );
 
 
-ALTER TABLE public.tg_users OWNER TO postgres;
+ALTER TABLE public.tg_users OWNER TO db;
 
 --
--- Name: hn_kids hn_kids_id_idx; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: hn_kids hn_kids_id_idx; Type: CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.hn_kids
@@ -107,7 +107,7 @@ ALTER TABLE ONLY public.hn_kids
 
 
 --
--- Name: hn_submitted hn_submitted_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: hn_submitted hn_submitted_pkey; Type: CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.hn_submitted
@@ -115,7 +115,7 @@ ALTER TABLE ONLY public.hn_submitted
 
 
 --
--- Name: hn_users hn_users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: hn_users hn_users_pkey; Type: CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.hn_users
@@ -123,7 +123,7 @@ ALTER TABLE ONLY public.hn_users
 
 
 --
--- Name: tg_subscriptions tg_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: tg_subscriptions tg_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.tg_subscriptions
@@ -131,7 +131,7 @@ ALTER TABLE ONLY public.tg_subscriptions
 
 
 --
--- Name: tg_users tg_users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: tg_users tg_users_pkey; Type: CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.tg_users
@@ -139,7 +139,7 @@ ALTER TABLE ONLY public.tg_users
 
 
 --
--- Name: hn_kids hn_kids_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: hn_kids hn_kids_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.hn_kids
@@ -147,7 +147,7 @@ ALTER TABLE ONLY public.hn_kids
 
 
 --
--- Name: hn_submitted hn_submitted_hn_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: hn_submitted hn_submitted_hn_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.hn_submitted
@@ -155,7 +155,7 @@ ALTER TABLE ONLY public.hn_submitted
 
 
 --
--- Name: tg_subscriptions tg_subscriptions_hn_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: tg_subscriptions tg_subscriptions_hn_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.tg_subscriptions
@@ -163,7 +163,7 @@ ALTER TABLE ONLY public.tg_subscriptions
 
 
 --
--- Name: tg_subscriptions tg_subscriptions_tg_user_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: tg_subscriptions tg_subscriptions_tg_user_chat_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: db
 --
 
 ALTER TABLE ONLY public.tg_subscriptions
