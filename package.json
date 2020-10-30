@@ -1,7 +1,8 @@
 {
   "name": "hn-comment-bot",
-  "version": "0.1.0",
-  "description": "",
+  "version": "1.0.0",
+  "description": "Telegram bot notifying about new HN comments, @hnCommentBot",
+  "repository": "golergka/hn-comment-bot",
   "main": ".build/index.js",
   "types": ".build/index.d.ts",
   "engines": {
