@@ -10,7 +10,7 @@ Other commands supported atm are `/subscriptions` and `/unsubscribe`.
 
 ## Development
 
-Bot uses Postgres 12, and the current schema dump is available at [[schema.sql]] (generated with [[dump.sh]]). I will probably move to use proper database migration tool soon.
+Bot uses Postgres 12, and the current schema dump is available at [schema.sql](schema.sql) (generated with [dump.sh](dump.sh)). I will probably move to use proper database migration tool soon.
 
 ## Feedback and contributions
 
