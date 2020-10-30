@@ -63,3 +63,31 @@ export interface IMarkOutdatedPostsQuery {
 	params: IMarkOutdatedPostsParams
 	result: IMarkOutdatedPostsResult
 }
+
+/** 'DeleteOutdatedKids' parameters type */
+export interface IDeleteOutdatedKidsParams {
+	id: number | null | void
+}
+
+/** 'DeleteOutdatedKids' return type */
+export type IDeleteOutdatedKidsResult = void
+
+/** 'DeleteOutdatedKids' query type */
+export interface IDeleteOutdatedKidsQuery {
+	params: IDeleteOutdatedKidsParams
+	result: IDeleteOutdatedKidsResult
+}
+
+/** 'DeleteOutdatedPosts' parameters type */
+export interface IDeleteOutdatedPostsParams {
+	id: number | null | void
+}
+
+/** 'DeleteOutdatedPosts' return type */
+export type IDeleteOutdatedPostsResult = void
+
+/** 'DeleteOutdatedPosts' query type */
+export interface IDeleteOutdatedPostsQuery {
+	params: IDeleteOutdatedPostsParams
+	result: IDeleteOutdatedPostsResult
+}

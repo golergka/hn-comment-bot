@@ -1,4 +1,4 @@
-/** Types generated for queries found in "./src/commands/subscriptions.ts" */
+/** Types generated for queries found in "./src/bot/commands/subscriptions.ts" */
 
 /** 'GetSubscriptionsByUser' parameters type */
 export interface IGetSubscriptionsByUserParams {

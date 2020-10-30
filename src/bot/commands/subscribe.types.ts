@@ -1,4 +1,4 @@
-/** Types generated for queries found in "./src/commands/subscribe.ts" */
+/** Types generated for queries found in "./src/bot/commands/subscribe.ts" */
 
 /** 'GetHnUser' parameters type */
 export interface IGetHnUserParams {

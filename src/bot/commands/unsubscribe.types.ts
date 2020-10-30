@@ -1,4 +1,4 @@
-/** Types generated for queries found in "./src/commands/unsubscribe.ts" */
+/** Types generated for queries found in "./src/bot/commands/unsubscribe.ts" */
 
 /** 'DeleteSubscription' parameters type */
 export interface IDeleteSubscriptionParams {

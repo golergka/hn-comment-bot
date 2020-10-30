@@ -1,10 +1,12 @@
-import { pg } from './pg'
-import { chunk, concat } from 'lodash'
+import { pg, tx } from './pg'
+import _, { chunk, concat, orderBy } from 'lodash'
 import { isItemArchived, Item, ItemID, loadHNItem, loadHNUser } from './hnApi'
 import { sql } from '@pgtyped/query'
 import {
 	ICreateKidsQuery,
 	ICreateRootsQuery,
+	IDeleteOutdatedKidsQuery,
+	IDeleteOutdatedPostsQuery,
 	IGetSubscribedUsersQuery,
 	IMarkOutdatedPostsQuery
 } from './serverRestartCheck.types'
@@ -60,28 +62,40 @@ async function checkRoots(
 	await checkKids(submitted)
 }
 
-async function getActiveItems(itemIds: number[]): Promise<Item[]> {
-	const result: Item[] = []
+async function getActiveItems(
+	itemIds: number[]
+): Promise<{
+	active: Item[]
+	firstInactive?: Item
+}> {
+	const active: Item[] = []
+	let firstInactive = undefined
 	for (const id of itemIds) {
 		const item = await loadHNItem(id)
 		if (isItemArchived(item)) {
+			firstInactive = item
 			break
 		}
-		result.push(item)
+		active.push(item)
 	}
-	return result
+	return { active, firstInactive }
 }
 
-async function checkUser(hnUsername: string): Promise<void> {
+async function checkUser(
+	hnUsername: string
+): Promise<{
+	firstInactive?: Item
+}> {
 	console.log(`Checking user ${hnUsername}`)
 	const hnUser: { submitted?: ItemID[] } = await loadHNUser(hnUsername)
 	const submittedIds = hnUser.submitted || []
-	const active = await getActiveItems(submittedIds)
+	const { active, firstInactive } = await getActiveItems(submittedIds)
 	console.log(`active ${active.length} out of ${submittedIds.length} submitted`)
 	const chunks = chunk(active, 10)
 	for (const c of chunks) {
 		await checkRoots(hnUsername, c)
 	}
+	return { firstInactive }
 }
 
 const getSubscribedUsers = sql<IGetSubscribedUsersQuery>`
@@ -112,14 +126,37 @@ const markOutdatedPosts = sql<IMarkOutdatedPostsQuery>`
 	FROM emptyIds
 `
 
+const deleteOutdatedKids = sql<IDeleteOutdatedKidsQuery>`
+	DELETE FROM hn_kids
+	WHERE id <= $id
+`
+
+const deleteOutdatedPosts = sql<IDeleteOutdatedPostsQuery>`
+	DELETE FROM hn_submitted
+	WHERE id <= $id
+`
+
 /**
  * Runs once on server start - we go through all the current users and their past post to find	comments we might have missed
  */
 export async function serverRestartCheck() {
 	console.log('Checking all users...')
 	const users = await getSubscribedUsers.run(undefined, pg)
+	const firstInactiveItems = []
 	for (const u of users) {
-		await checkUser(u.hn_user_id)
+		firstInactiveItems.push(await checkUser(u.hn_user_id))
+	}
+	const inactive = _(firstInactiveItems)
+		.filter((f) => !!f.firstInactive)
+		.map((f) => f.firstInactive!)
+		.sort((i) => i.time)
+		.orderBy((i) => i.time, 'desc')
+		.first()
+	if (inactive) {
+		tx(async (db) => {
+			await deleteOutdatedKids.run({ id: inactive.id }, db)
+			await deleteOutdatedPosts.run({ id: inactive.id }, db)
+		})
 	}
 	await markOutdatedPosts.run(undefined, pg)
 	console.log('All users checked.')
