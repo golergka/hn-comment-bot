@@ -132,8 +132,19 @@ const deleteOutdatedKids = sql<IDeleteOutdatedKidsQuery>`
 `
 
 const deleteOutdatedPosts = sql<IDeleteOutdatedPostsQuery>`
+	WITH outdated AS (
+		SELECT id
+		FROM hn_submitted
+		WHERE id <= $id
+	),
+	deleted_kids AS(
+		DELETE FROM hn_kids
+		USING outdated
+		WHERE hn_kids.parent_id IN (outdated.id)
+	)
 	DELETE FROM hn_submitted
-	WHERE id <= $id
+	USING outdated
+		WHERE hn_submitted.id IN (outdated.id)
 `
 
 /**
